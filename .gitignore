@@ -1,0 +1,41 @@
+# ===========================
+# NODE / NPM
+# ===========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ===========================
+# ENVIRONMENT & SECRETS  ← CRITICAL: Never commit .env
+# ===========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ===========================
+# BUILD OUTPUT
+# ===========================
+dist/
+build/
+.vite/
+
+# ===========================
+# EDITOR / OS FILES
+# ===========================
+.DS_Store
+Thumbs.db
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ===========================
+# LOGS
+# ===========================
+logs/
+*.log
