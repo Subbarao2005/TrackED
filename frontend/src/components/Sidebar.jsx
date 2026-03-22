@@ -118,17 +118,17 @@ export default function Sidebar({ role }) {
 
       {/* Bottom: Mini Profile + Logout */}
       <div className="p-4 border-t border-slate-800/80 space-y-3">
-        {/* Mini Profile */}
+        {/* Mini Profile Routing to /profile */}
         {user && (
-          <div className="flex items-center gap-3 px-3 py-3 bg-slate-900/60 rounded-2xl border border-slate-800">
+          <NavLink to="/profile" className={({ isActive }) => `flex items-center gap-3 px-3 py-3 rounded-2xl border transition-all ${isActive ? 'bg-slate-800 border-cyan-500/50 shadow-md shadow-cyan-500/10' : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800 hover:border-slate-700'}`}>
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold shadow flex-shrink-0">
               {initials}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-white truncate">{user.name}</p>
               <p className="text-[10px] text-slate-500 capitalize font-medium">{user.role}</p>
             </div>
-          </div>
+          </NavLink>
         )}
 
         {/* Logout */}

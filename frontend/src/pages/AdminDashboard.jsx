@@ -65,6 +65,19 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:5000/api/admin/user/${id}`, { status: !currentStatus }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(currentStatus ? 'Node deactivated.' : 'Node activated.');
+      fetchData();
+    } catch (err) {
+      toast.error('Failed to shift node status.');
+    }
+  };
+
   const handleImpersonate = (role) => {
     toast(`Routing to ${role} interface as Root Admin...`);
     window.location.href = `/${role}`;
@@ -164,6 +177,7 @@ export default function AdminDashboard() {
                    <th className="py-4 pl-6 font-semibold">Entity Profile</th>
                    <th className="py-4 font-semibold">Email Target</th>
                    <th className="py-4 font-semibold">Clearance Role</th>
+                   <th className="py-4 font-semibold text-center">Engine Status</th>
                    <th className="py-4 pr-6 font-semibold text-right">System Override</th>
                  </tr>
                </thead>
@@ -187,6 +201,15 @@ export default function AdminDashboard() {
                           'text-emerald-500 bg-emerald-500 border-emerald-500'}`}>
                          {u.role}
                        </span>
+                     </td>
+                     <td className="py-4 text-center">
+                        <button 
+                          onClick={() => handleToggleStatus(u._id, u.status)} 
+                          disabled={u.role === 'admin'}
+                          className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${u.status ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' : 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'} disabled:opacity-50`}
+                        >
+                          {u.status ? 'ACTIVE' : 'KILLED'}
+                        </button>
                      </td>
                      <td className="py-4 pr-6 text-right">
                        <div className="flex justify-end gap-2">

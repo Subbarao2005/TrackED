@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'developer', 'teacher', 'mentor', 'student'],
     required: true,
     default: 'student'
-  }
+  },
+  status: { type: Boolean, default: true }
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);

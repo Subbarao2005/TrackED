@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import User from '../models/User.js';
+import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -50,6 +51,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    if (user.status === false) return res.status(403).json({ message: 'Account deactivated. Contact system admin.' });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
@@ -61,6 +63,37 @@ router.post('/login', loginLimiter, async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
+  }
+});
+
+// @route GET /api/auth/profile
+// @desc Get current user profile
+router.get('/profile', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// @route PUT /api/auth/profile/password
+// @desc Update user password
+router.put('/profile/password', authMiddleware, async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id);
+    
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Incorrect old password.' });
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: 'Password updated successfully.' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update password.' });
   }
 });
 

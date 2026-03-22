@@ -97,10 +97,9 @@ export default function TeacherUsers() {
                         <select 
                            value={newUser.role}
                            onChange={e => setNewUser({...newUser, role: e.target.value})}
-                           className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-fuchsia-500 appearance-none"
+                           className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-fuchsia-500 appearance-none pointer-events-none opacity-80"
                         >
-                           <option value="student">Student Account</option>
-                           <option value="mentor">Mentor Designation</option>
+                           <option value="student">Student Account (Only)</option>
                         </select>
                      </div>
                      <div>

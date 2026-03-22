@@ -19,6 +19,7 @@ import TeacherFinance from './pages/TeacherFinance';
 import StudentExam from './pages/StudentExam';
 import StudentLeaderboard from './pages/StudentLeaderboard';
 import AdminDashboard from './pages/AdminDashboard';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -30,6 +31,10 @@ function App() {
         <Route path="/login" element={<Login />} />
         
         {/* Protected Dashboard Routes */}
+        <Route 
+          path="/profile" 
+          element={<ProtectedRoute allowedRoles={['student', 'mentor', 'teacher', 'admin', 'developer']}><Profile /></ProtectedRoute>} 
+        />
         <Route 
           path="/admin" 
           element={<ProtectedRoute allowedRoles={['admin', 'developer']}><AdminDashboard /></ProtectedRoute>} 

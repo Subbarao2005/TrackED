@@ -81,7 +81,7 @@ router.post('/user', [authMiddleware, adminMiddleware], async (req, res) => {
 // @desc    Update a user's details / role
 router.put('/user/:id', [authMiddleware, adminMiddleware], async (req, res) => {
     try {
-        const { name, email, role } = req.body;
+        const { name, email, role, status } = req.body;
         
         const user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ message: 'User object physically absent.' });
@@ -89,6 +89,7 @@ router.put('/user/:id', [authMiddleware, adminMiddleware], async (req, res) => {
         // Warning: Role mutations map structures. If going from student->mentor, we leave the structural Student ghost in DB for now (v2.1 fix target).
         user.name = name || user.name;
         user.email = email || user.email;
+        if (status !== undefined) user.status = status;
         if (role && user.role !== role) {
             user.role = role;
             if (role === 'student') {
