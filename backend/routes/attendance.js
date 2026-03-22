@@ -119,4 +119,69 @@ router.get('/student-stats', authMiddleware, async (req, res) => {
     }
 });
 
+// @route   POST /api/attendance/generate-otp
+// @desc    Mentor generates an active OTP for smart attendance. Valid for 5 mins.
+router.post('/generate-otp', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== 'mentor') return res.status(403).json({ message: 'Unauthorized' });
+        
+        const mentorProfile = await Mentor.findOne({ user: req.user.id });
+        if (!mentorProfile) return res.status(404).json({ message: 'Mentor profile missing.' });
+
+        // Generate a random 4-digit code
+        const code = Math.floor(1000 + Math.random() * 9000).toString();
+        const expires = new Date(Date.now() + 5 * 60000); // 5 minutes from now
+        
+        mentorProfile.activeOtp = code;
+        mentorProfile.otpExpiresAt = expires;
+        await mentorProfile.save();
+
+        res.json({ otp: code, expiresAt: expires });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to cryptographically generate OTP.' });
+    }
+});
+
+// @route   POST /api/attendance/verify-otp
+// @desc    Student verifies the OTP sent by their mentor to auto-mark PRESENT
+router.post('/verify-otp', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== 'student') return res.status(403).json({ message: 'Only students can run OTP validation routines.' });
+        const { otp } = req.body;
+        
+        // Find who their mentor is
+        const studentProfile = await Student.findOne({ user: req.user.id }).populate('mentor');
+        if (!studentProfile || !studentProfile.mentor) {
+            return res.status(400).json({ message: 'You must be assigned to a Mentor to utilize Smart OTP verification.' });
+        }
+
+        const mentorProfile = studentProfile.mentor;
+        
+        // Validate OTP and Expiry
+        if (!mentorProfile.activeOtp || mentorProfile.activeOtp !== otp) {
+            return res.status(400).json({ message: 'Invalid OTP code.' });
+        }
+        if (new Date() > mentorProfile.otpExpiresAt) {
+            return res.status(400).json({ message: 'This OTP has expired.' });
+        }
+
+        // OTP is VALID -> Mark Student as Present for today!
+        const todayStr = new Date().toISOString().split('T')[0];
+        await Attendance.findOneAndUpdate(
+            { student: req.user.id, date: todayStr },
+            { status: 'Present', mentor: mentorProfile.user }, // Credit the mentoring user id
+            { upsert: true, new: true }
+        );
+
+        // Alert both ends
+        await Notification.create({ user: req.user.id, message: `OTP verified. Marked Present for ${todayStr}.`, type: 'attendance' });
+        io.to(req.user.id).emit('live_attendance', { status: 'Present', date: todayStr });
+        io.to(mentorProfile.user.toString()).emit('smart_attendance_hit', { student: req.user.id, name: "A Student" });
+
+        res.json({ message: 'Successfully Verified! Marked Present.' });
+    } catch (err) {
+        res.status(500).json({ message: 'Engine failure during verification loop.' });
+    }
+});
+
 export default router;

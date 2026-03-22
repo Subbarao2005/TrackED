@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Bell, ShieldCheck, CheckCircle2, XCircle } from 'lucide-react';
+import { Bell, ShieldCheck, CheckCircle2, XCircle, Key, Clock } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -8,6 +8,10 @@ export default function MentorAttendance() {
   const [students, setStudents] = useState([]);
   const [todayDate, setTodayDate] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // OTP State
+  const [otpData, setOtpData] = useState(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
      const fetchRoster = async () => {
@@ -26,6 +30,22 @@ export default function MentorAttendance() {
      };
      fetchRoster();
   }, []);
+
+  const generateOTP = async () => {
+    setGenerating(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post('http://localhost:5000/api/attendance/generate-otp', {}, {
+         headers: { Authorization: `Bearer ${token}` }
+      });
+      setOtpData(res.data);
+      toast.success("5-minute OTP Generated Successfully!");
+    } catch(err) {
+      toast.error("Failed to generate OTP.");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const markStatus = (id, status) => {
     setStudents(students.map(s => s.id === id ? { ...s, status } : s));
@@ -59,10 +79,10 @@ export default function MentorAttendance() {
       <Sidebar role="mentor" />
 
       <div className="flex-1 ml-64 p-8">
-        <header className="flex justify-between items-center mb-10">
+        <header className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white">Attendance Marking</h1>
-            <p className="text-slate-400 text-sm mt-1">Rapidly update daily attendance for your assigned roster.</p>
+            <p className="text-slate-400 text-sm mt-1">Manage daily attendance via manual entry or Smart OTP.</p>
           </div>
           <div className="flex items-center gap-6">
             <button className="relative p-2 rounded-full border border-slate-800 bg-[#0A0F1C] text-slate-400 hover:text-indigo-400 transition-colors">
@@ -71,6 +91,31 @@ export default function MentorAttendance() {
           </div>
         </header>
 
+        {/* Smart OTP Section */}
+        <div className="bg-gradient-to-r from-indigo-500/10 border border-indigo-500/30 rounded-3xl p-6 max-w-4xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
+           <div>
+             <h2 className="text-lg font-bold text-indigo-400 flex items-center gap-2 mb-2"><Key className="w-5 h-5"/> Smart OTP System</h2>
+             <p className="text-sm text-slate-400 max-w-md">Generate a distinct 4-digit code. Students can enter this on their devices to log attendance automatically. Valid for 5 minutes.</p>
+           </div>
+           
+           <div className="flex items-center gap-4">
+              {otpData ? (
+                 <div className="flex items-center gap-4 bg-[#0A0F1C] border border-indigo-500/50 p-4 rounded-2xl shadow-lg">
+                    <div className="text-center">
+                       <p className="text-3xl font-black text-indigo-400 tracking-[0.2em]">{otpData.otp}</p>
+                       <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 flex items-center justify-center gap-1"><Clock className="w-3 h-3"/> Active Now</p>
+                    </div>
+                    <button onClick={generateOTP} className="text-xs font-bold text-slate-400 hover:text-white px-3 py-1.5 border border-slate-700 bg-slate-900 rounded-lg transition-colors">New</button>
+                 </div>
+              ) : (
+                 <button onClick={generateOTP} disabled={generating} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-lg flex items-center gap-2">
+                    <Key className="w-4 h-4"/> {generating ? "Generating..." : "Generate OTP"}
+                 </button>
+              )}
+           </div>
+        </div>
+
+        {/* Manual Tracker */}
         <div className="bg-[#0A0F1C] rounded-3xl border border-slate-800/80 shadow-lg p-6 max-w-4xl">
           <div className="flex justify-between items-center mb-6">
              <h2 className="text-xl font-bold text-white flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-indigo-400"/> Daily Register: {todayDate || '...'}</h2>
