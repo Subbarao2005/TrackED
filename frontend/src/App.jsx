@@ -18,6 +18,7 @@ import TeacherExams from './pages/TeacherExams';
 import TeacherFinance from './pages/TeacherFinance';
 import StudentExam from './pages/StudentExam';
 import StudentLeaderboard from './pages/StudentLeaderboard';
+import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -30,70 +31,75 @@ function App() {
         
         {/* Protected Dashboard Routes */}
         <Route 
+          path="/admin" 
+          element={<ProtectedRoute allowedRoles={['admin', 'developer']}><AdminDashboard /></ProtectedRoute>} 
+        />
+        
+        <Route 
           path="/student" 
-          element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['student', 'admin', 'developer']}><StudentDashboard /></ProtectedRoute>} 
         />
         <Route 
           path="/student/tasks" 
-          element={<ProtectedRoute allowedRoles={['student']}><StudentTasks /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['student', 'admin', 'developer']}><StudentTasks /></ProtectedRoute>} 
         />
         <Route 
           path="/student/exam" 
-          element={<ProtectedRoute allowedRoles={['student']}><StudentExam /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['student', 'admin', 'developer']}><StudentExam /></ProtectedRoute>} 
         />
         <Route 
           path="/student/marks" 
-          element={<ProtectedRoute allowedRoles={['student']}><StudentMarks /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['student', 'admin', 'developer']}><StudentMarks /></ProtectedRoute>} 
         />
         <Route 
           path="/student/fees" 
-          element={<ProtectedRoute allowedRoles={['student']}><StudentFees /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['student', 'admin', 'developer']}><StudentFees /></ProtectedRoute>} 
         />
         <Route 
           path="/student/leaderboard" 
-          element={<ProtectedRoute allowedRoles={['student']}><StudentLeaderboard /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['student', 'admin', 'developer']}><StudentLeaderboard /></ProtectedRoute>} 
         />
         
         <Route 
           path="/mentor" 
-          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'developer']}><MentorDashboard /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'admin', 'developer']}><MentorDashboard /></ProtectedRoute>} 
         />
         <Route 
           path="/mentor/students" 
-          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'developer']}><MentorStudents /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'admin', 'developer']}><MentorStudents /></ProtectedRoute>} 
         />
         <Route 
           path="/mentor/attendance" 
-          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'developer']}><MentorAttendance /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'admin', 'developer']}><MentorAttendance /></ProtectedRoute>} 
         />
         <Route 
           path="/mentor/tasks" 
-          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'developer']}><MentorTasks /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'admin', 'developer']}><MentorTasks /></ProtectedRoute>} 
         />
         <Route 
           path="/mentor/salary" 
-          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'developer']}><MentorSalary /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['mentor', 'teacher', 'admin', 'developer']}><MentorSalary /></ProtectedRoute>} 
         />
         
         <Route 
           path="/teacher" 
-          element={<ProtectedRoute allowedRoles={['teacher', 'developer']}><TeacherDashboard /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['teacher', 'admin', 'developer']}><TeacherDashboard /></ProtectedRoute>} 
         />
         <Route 
           path="/teacher/users" 
-          element={<ProtectedRoute allowedRoles={['teacher', 'developer']}><TeacherUsers /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['teacher', 'admin', 'developer']}><TeacherUsers /></ProtectedRoute>} 
         />
         <Route 
           path="/teacher/assignments" 
-          element={<ProtectedRoute allowedRoles={['teacher', 'developer']}><TeacherAssignments /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['teacher', 'admin', 'developer']}><TeacherAssignments /></ProtectedRoute>} 
         />
         <Route 
           path="/teacher/exams" 
-          element={<ProtectedRoute allowedRoles={['teacher', 'developer']}><TeacherExams /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['teacher', 'admin', 'developer']}><TeacherExams /></ProtectedRoute>} 
         />
         <Route 
           path="/teacher/finance" 
-          element={<ProtectedRoute allowedRoles={['teacher', 'developer']}><TeacherFinance /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRoles={['teacher', 'admin', 'developer']}><TeacherFinance /></ProtectedRoute>} 
         />
         
         <Route path="*" element={<Navigate to="/login" replace />} />

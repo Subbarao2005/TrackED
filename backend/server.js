@@ -19,6 +19,7 @@ import examRoutes from './routes/exam.js';
 import financeRoutes from './routes/finance.js';
 import notificationRoutes from './routes/notifications.js';
 import leaderboardRoutes from './routes/leaderboard.js';
+import adminRoutes from './routes/admin.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -62,6 +63,7 @@ app.use('/api/exam', examRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('API Running – TrackED Backend v2.0 (Secured + Rate-Limited)');
@@ -97,9 +99,10 @@ const connectDB = async () => {
         { name: 'Demo Student', email: 'student@tracked.com', password: defaultPassword, role: 'student' },
         { name: 'Dr. Mentor', email: 'mentor@tracked.com', password: defaultPassword, role: 'mentor' },
         { name: 'Admin Teacher', email: 'teacher@tracked.com', password: defaultPassword, role: 'teacher' },
-        { name: 'System Dev', email: 'developer@tracked.com', password: defaultPassword, role: 'developer' }
+        { name: 'System Dev', email: 'developer@tracked.com', password: defaultPassword, role: 'developer' },
+        { name: 'Super Admin', email: 'admin@tracked.com', password: defaultPassword, role: 'admin' }
       ]);
-      console.log('✅ 4 Demo Accounts Seeded. Password for all: "password"');
+      console.log('✅ 5 Demo Accounts Seeded. Password for all: "password"');
 
       // 🛑 Generate Relationship Ties 🛑
       const studentUser = await User.findOne({ email: 'student@tracked.com' });

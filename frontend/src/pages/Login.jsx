@@ -18,7 +18,7 @@ export default function Login() {
     let finalEmail = email.trim();
     if (finalEmail.endsWith('@')) {
         finalEmail += 'tracked.com';
-    } else if (['student', 'mentor', 'teacher', 'developer'].includes(finalEmail)) {
+    } else if (['admin', 'student', 'mentor', 'teacher', 'developer'].includes(finalEmail)) {
         finalEmail += '@tracked.com';
     }
 
@@ -32,10 +32,12 @@ export default function Login() {
       
       toast.success(`Welcome back, ${user.name}!`);
       
-      if (user.role === 'student') navigate('/student');
+      if (user.role === 'admin') navigate('/admin');
+      else if (user.role === 'student') navigate('/student');
       else if (user.role === 'mentor') navigate('/mentor');
       else if (user.role === 'teacher') navigate('/teacher');
-      else if (user.role === 'developer') navigate('/developer');
+      else if (user.role === 'developer') navigate('/admin'); // map developers to the admin portal
+      
       
     } catch (err) {
       setIsLoading(false);
@@ -200,7 +202,7 @@ export default function Login() {
               <span className="bg-[#0A0F1C] border border-slate-700/80 px-2.5 py-1.5 rounded-lg text-xs font-mono text-cyan-400 cursor-help hover:border-cyan-400/50 transition-colors shadow-sm" title="Enter 'student@' in email">student@</span>
               <span className="bg-[#0A0F1C] border border-slate-700/80 px-2.5 py-1.5 rounded-lg text-xs font-mono text-indigo-400 cursor-help hover:border-indigo-400/50 transition-colors shadow-sm" title="Enter 'mentor@' in email">mentor@</span>
               <span className="bg-[#0A0F1C] border border-slate-700/80 px-2.5 py-1.5 rounded-lg text-xs font-mono text-purple-400 cursor-help hover:border-purple-400/50 transition-colors shadow-sm" title="Enter 'teacher@' in email">teacher@</span>
-              <span className="bg-[#0A0F1C] border border-slate-700/80 px-2.5 py-1.5 rounded-lg text-xs font-mono text-rose-400 cursor-help hover:border-rose-400/50 transition-colors shadow-sm" title="Enter 'developer@' in email">developer@</span>
+              <span className="bg-[#0A0F1C] border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-xs font-mono text-amber-400 cursor-help hover:border-amber-400/50 transition-colors shadow-sm" title="Enter 'admin@' in email">admin@</span>
             </div>
           </div>
         </div>

@@ -45,6 +45,11 @@ export default function Sidebar({ role }) {
         { name: 'AI Exams', icon: BookOpen, path: '/teacher/exams' },
         { name: 'Financial Control', icon: CreditCard, path: '/teacher/finance' },
       ];
+    } else if (role === 'admin' || role === 'developer') {
+      return [
+        { name: 'System Control', icon: LayoutDashboard, path: '/admin' },
+        { name: 'Impersonation API', icon: Users, path: '/student' },
+      ];
     }
     return [];
   };
