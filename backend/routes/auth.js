@@ -1,9 +1,19 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import User from '../models/User.js';
 
 const router = express.Router();
+
+// 🛡️ Brute-Force Protection: max 10 login attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { message: 'Too many login attempts from this IP. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // @route POST /api/auth/register
 // @desc Register a typical user
@@ -34,7 +44,7 @@ router.post('/register', async (req, res) => {
 
 // @route POST /api/auth/login
 // @desc Login user & get token
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 

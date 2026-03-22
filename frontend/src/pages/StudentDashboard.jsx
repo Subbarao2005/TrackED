@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
+import { SkeletonStatCard, SkeletonTableRow } from '../components/SkeletonCard';
 import { Bell, Search, TrendingUp, CheckCircle, CalendarDays, BookOpen, Calendar, ArrowUpRight, Clock, MapPin, CheckSquare, User } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -41,11 +43,17 @@ export default function StudentDashboard() {
       } catch (err) {}
   };
 
-  // SVG Chart Calculation
+  // SVG Gauge Calculation
   const attendanceScore = stats.percentage; 
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (attendanceScore / 100) * circumference;
+
+  // Framer Motion variants
+  const cardVariants = {
+    hidden: { opacity: 0, y: 24 },
+    visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.4, ease: 'easeOut' } })
+  };
 
   return (
     <div className="min-h-screen bg-[#060913] text-slate-100 flex">
@@ -116,7 +124,18 @@ export default function StudentDashboard() {
         {/* Dashboard Grid metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           
-          <div className="bg-[#0A0F1C] border border-slate-800/80 p-6 rounded-3xl shadow-lg relative overflow-hidden group hover:border-cyan-500/50 transition-colors cursor-default">
+          {loading ? (
+            <>
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
+            </>
+          ) : (
+            <>
+
+          <motion.div custom={0} variants={cardVariants} initial="hidden" animate="visible"
+            className="bg-[#0A0F1C] border border-slate-800/80 p-6 rounded-3xl shadow-lg relative overflow-hidden group hover:border-cyan-500/50 transition-colors cursor-default">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800">
@@ -124,10 +143,11 @@ export default function StudentDashboard() {
               </div>
             </div>
             <h3 className="text-slate-400 font-medium text-sm">Overall Attendance</h3>
-            <p className="text-3xl font-extrabold text-white mt-1">{loading ? "..." : `${stats.percentage}%`}</p>
-          </div>
+            <p className="text-3xl font-extrabold text-white mt-1">{`${stats.percentage}%`}</p>
+          </motion.div>
 
-          <div className="bg-[#0A0F1C] border border-slate-800/80 p-6 rounded-3xl shadow-lg relative overflow-hidden group hover:border-indigo-500/50 transition-colors cursor-default">
+          <motion.div custom={1} variants={cardVariants} initial="hidden" animate="visible"
+            className="bg-[#0A0F1C] border border-slate-800/80 p-6 rounded-3xl shadow-lg relative overflow-hidden group hover:border-indigo-500/50 transition-colors cursor-default">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
             <div className="flex justify-between items-start mb-3">
               <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800 relative z-10">
@@ -138,8 +158,8 @@ export default function StudentDashboard() {
               </span>
             </div>
             <h3 className="text-slate-400 font-medium text-sm">Classes Tracked</h3>
-            <p className="text-3xl font-extrabold text-white mt-1">{loading ? "..." : stats.totalClassesRecorded}</p>
-            {!loading && stats.totalClassesRecorded > 0 && (
+            <p className="text-3xl font-extrabold text-white mt-1">{stats.totalClassesRecorded}</p>
+            {stats.totalClassesRecorded > 0 && (
               <div className="flex gap-3 mt-3 pt-3 border-t border-slate-800">
                 <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
@@ -151,34 +171,39 @@ export default function StudentDashboard() {
                 </span>
               </div>
             )}
-          </div>
+          </motion.div>
 
-          <div className="bg-[#0A0F1C] border border-slate-800/80 p-6 rounded-3xl shadow-lg relative overflow-hidden group hover:border-rose-500/50 transition-colors cursor-default">
+          <motion.div custom={2} variants={cardVariants} initial="hidden" animate="visible"
+            className="bg-[#0A0F1C] border border-slate-800/80 p-6 rounded-3xl shadow-lg relative overflow-hidden group hover:border-rose-500/50 transition-colors cursor-default">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800">
                 <CheckCircle className="w-6 h-6 text-rose-400" />
               </div>
-              {!loading && tasks.filter(t => t.status === 'Pending').length > 0 && (
+              {tasks.filter(t => t.status === 'Pending').length > 0 && (
                 <span className="bg-rose-500/10 text-rose-400 text-xs font-bold px-2.5 py-1 rounded-full">
                   {tasks.filter(t => t.status === 'Pending').length} Due
                 </span>
               )}
             </div>
             <h3 className="text-slate-400 font-medium text-sm">Pending Tasks</h3>
-            <p className="text-3xl font-bold text-white mt-1">{loading ? '...' : tasks.filter(t => t.status === 'Pending').length}</p>
-            {!loading && tasks.filter(t => t.status === 'In Progress').length > 0 && (
+            <p className="text-3xl font-bold text-white mt-1">{tasks.filter(t => t.status === 'Pending').length}</p>
+            {tasks.filter(t => t.status === 'In Progress').length > 0 && (
               <p className="text-xs text-amber-400 font-bold mt-2">{tasks.filter(t => t.status === 'In Progress').length} In Progress</p>
             )}
-          </div>
+          </motion.div>
 
-          <div className="bg-gradient-to-br from-indigo-600 to-cyan-600 border border-cyan-500/50 p-6 rounded-3xl shadow-[0_0_30px_rgba(6,182,212,0.2)] relative overflow-hidden">
+          <motion.div custom={3} variants={cardVariants} initial="hidden" animate="visible"
+            className="bg-gradient-to-br from-indigo-600 to-cyan-600 border border-cyan-500/50 p-6 rounded-3xl shadow-[0_0_30px_rgba(6,182,212,0.2)] relative overflow-hidden">
             <div className="absolute right-0 top-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
             <CalendarDays className="w-8 h-8 text-white/80 mb-6" />
             <h3 className="text-cyan-100 font-medium text-sm">Next Mentor Meeting</h3>
-            <p className="text-xl font-bold text-white mt-1">{loading ? '...' : (stats.nextMeeting || 'Not Scheduled')}</p>
-            <p className="text-sm text-cyan-200 mt-2 font-medium border-t border-cyan-400/30 pt-2">{loading ? '...' : (stats.mentorName ? `Prof. ${stats.mentorName}` : 'Unassigned Mentor')}</p>
-          </div>
+            <p className="text-xl font-bold text-white mt-1">{stats.nextMeeting || 'Not Scheduled'}</p>
+            <p className="text-sm text-cyan-200 mt-2 font-medium border-t border-cyan-400/30 pt-2">{stats.mentorName ? `Prof. ${stats.mentorName}` : 'Unassigned Mentor'}</p>
+          </motion.div>
+
+          </> /* end loading conditional */
+          )}
 
         </div>
 
@@ -197,11 +222,15 @@ export default function StudentDashboard() {
                     </tr>
                   </thead>
                   <tbody className="text-sm font-medium">
-                    {loading ? (
-                       <tr><td colSpan="4" className="py-8 text-center text-slate-500">Syncing live task database...</td></tr>
-                    ) : tasks.length === 0 ? (
-                       <tr><td colSpan="4" className="py-8 text-center text-slate-500">You have no tasks assigned to you right now!</td></tr>
-                    ) : tasks.map(task => {
+          {loading ? (
+            <>
+              <SkeletonTableRow cols={4} />
+              <SkeletonTableRow cols={4} />
+              <SkeletonTableRow cols={4} />
+            </>
+          ) : tasks.length === 0 ? (
+             <tr><td colSpan="4" className="py-8 text-center text-slate-500">Syncing live task database...</td></tr>
+          ) : tasks.map(task => {
                        const colorClass = task.color === 'rose' ? 'bg-rose-500/10 text-rose-400' : task.color === 'amber' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400';
                        return (
                          <tr key={task._id} className="border-b border-slate-800/50 hover:bg-slate-900/50 transition-colors">
@@ -226,7 +255,15 @@ export default function StudentDashboard() {
             <div className="relative w-40 h-40 flex items-center justify-center mt-4">
               <svg className="transform -rotate-90 w-40 h-40">
                 <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-800" />
-                <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={circumference} strokeDashoffset={loading ? circumference : strokeDashoffset} className="text-cyan-500 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)] transition-all duration-1000" />
+                <motion.circle
+                  cx="80" cy="80" r="70"
+                  stroke="currentColor" strokeWidth="12" fill="transparent"
+                  strokeDasharray={circumference}
+                  initial={{ strokeDashoffset: circumference }}
+                  animate={{ strokeDashoffset: loading ? circumference : strokeDashoffset }}
+                  transition={{ duration: 1.4, ease: 'easeOut' }}
+                  className="text-cyan-500 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+                />
               </svg>
               <div className="absolute flex flex-col items-center justify-center">
                 <span className="text-3xl font-extrabold text-white">{loading ? '...' : `${stats.percentage}%`}</span>

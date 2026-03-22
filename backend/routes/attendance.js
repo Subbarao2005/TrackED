@@ -69,38 +69,49 @@ router.post('/mark', authMiddleware, async (req, res) => {
 });
 
 // @route   GET /api/attendance/student-stats
-// @desc    Student UI calls this to dynamically process total percentage counts and specific daily status
+// @desc    Student dashboard stats via MongoDB Aggregation Pipeline
 router.get('/student-stats', authMiddleware, async (req, res) => {
     try {
         if (req.user.role !== 'student') return res.status(403).json({ message: 'Unauthorized' });
-        
-        const records = await Attendance.find({ student: req.user.id });
-        
-        const totalRaw = records.length;
-        const presentRaw = records.filter(mark => mark.status === 'Present').length;
-        
-        // Base logical parameters. Start the GUI at a fresh 100% assumption if records = 0
+
+        // ⚡ MongoDB Aggregation Pipeline — computed at DB level, not in JavaScript
+        const pipeline = [
+            { $match: { student: new (await import('mongoose')).default.Types.ObjectId(req.user.id) } },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: 1 },
+                    present: { $sum: { $cond: [{ $eq: ['$status', 'Present'] }, 1, 0] } },
+                    absent:  { $sum: { $cond: [{ $eq: ['$status', 'Absent'] }, 1, 0] } }
+                }
+            }
+        ];
+
+        const [agg] = await Attendance.aggregate(pipeline);
+        const totalRaw   = agg?.total   || 0;
+        const presentRaw = agg?.present || 0;
+        const absentRaw  = agg?.absent  || 0;
         const percentageValue = totalRaw === 0 ? 100 : Math.round((presentRaw / totalRaw) * 100);
-        
+
+        // Today's status check
         const todayStr = new Date().toISOString().split('T')[0];
-        const activeTodayRecord = records.find(r => r.date === todayStr);
+        const todayRecord = await Attendance.findOne({ student: req.user.id, date: todayStr });
 
-        // Fetch precise relational dependencies to sync exact scheduling logic into dashboard GUI safely
-        const studentProfile = await Student.findOne({ user: req.user.id }).populate({ path: 'mentor', populate: { path: 'user', select: 'name' } });
-
-        const absentRaw = totalRaw - presentRaw;
+        // Relational data for mentor name + next meeting
+        const studentProfile = await Student.findOne({ user: req.user.id })
+            .populate({ path: 'mentor', populate: { path: 'user', select: 'name' } });
 
         res.json({
             percentage: percentageValue,
             totalClassesRecorded: totalRaw,
             attendedClasses: presentRaw,
             absentClasses: absentRaw,
-            todaysStatus: activeTodayRecord ? activeTodayRecord.status : 'Pending',
+            todaysStatus: todayRecord ? todayRecord.status : 'Pending',
             nextMeeting: studentProfile?.nextMeeting || 'Not Scheduled',
             mentorName: studentProfile?.mentor?.user?.name || 'Unassigned'
         });
     } catch (err) {
-        res.status(500).json({ message: 'Student stat calculation engine failure.' });
+        res.status(500).json({ message: 'Student stat aggregation engine failure.' });
     }
 });
 

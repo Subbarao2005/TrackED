@@ -5,6 +5,9 @@ import './loadEnv.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import cron from 'node-cron';
 import authRoutes from './routes/auth.js';
 import mentorRoutes from './routes/mentor.js';
 import taskRoutes from './routes/tasks.js';
@@ -17,7 +20,18 @@ import notificationRoutes from './routes/notifications.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// 🛡️ Security Middleware
+app.use(helmet({ contentSecurityPolicy: false })); // Security headers
+
+// 🚦 Global API Rate Limiter: 200 requests per 15 minutes per IP
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { message: 'Too many requests from this IP, please try again shortly.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', globalLimiter);
 app.use(express.json());
 app.use(cors());
 
@@ -32,7 +46,7 @@ app.use('/api/finance', financeRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 app.get('/', (req, res) => {
-  res.send('API Running');
+  res.send('API Running – TrackED Backend v2.0 (Secured + Rate-Limited)');
 });
 
 import { MongoMemoryServer } from 'mongodb-memory-server';
@@ -92,5 +106,29 @@ const connectDB = async () => {
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`🛡️  Rate Limiting: Active | 🔒 Helmet: Active`);
   });
+
+  // ⏰ Midnight Cron: Scan overdue tasks & push in-app notifications
+  cron.schedule('0 0 * * *', async () => {
+    try {
+      const Task = (await import('./models/Task.js')).default;
+      const Notification = (await import('./models/Notification.js')).default;
+      const today = new Date().toISOString().split('T')[0];
+      const overdueTasks = await Task.find({
+        status: { $in: ['Pending', 'In Progress'] },
+        deadline: { $lt: today }
+      });
+      if (overdueTasks.length > 0) {
+        const notifs = overdueTasks.map(t => ({
+          user: t.student,
+          message: `⚠️ Overdue Task: "${t.title}" was due on ${t.deadline}. Please complete it urgently!`,
+          type: 'task'
+        }));
+        await Notification.insertMany(notifs);
+        console.log(`[CRON] Pushed ${overdueTasks.length} overdue notifications.`);
+      }
+    } catch (err) { console.error('[CRON ERROR]', err.message); }
+  });
+  console.log('⏰ Midnight overdue-task cron scheduled.');
 });
