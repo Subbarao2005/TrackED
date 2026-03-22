@@ -5,8 +5,11 @@ const taskSchema = new mongoose.Schema({
   deadline: { type: String, required: true },
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // The target student
   assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // The mentor who created it
-  status: { type: String, enum: ['Pending', 'In Progress', 'Completed'], default: 'Pending' },
-  color: { type: String, default: 'amber' }
+  status: { type: String, enum: ['Pending', 'In Progress', 'Under Review', 'Completed'], default: 'Pending' },
+  color: { type: String, default: 'amber' },
+  submissionUrl: { type: String }, // Link to Cloudinary/S3 PDF
+  feedback: { type: String },
+  grade: { type: Number }
 }, { timestamps: true });
 
 export default mongoose.model('Task', taskSchema);

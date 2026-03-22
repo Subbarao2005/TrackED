@@ -4,6 +4,7 @@ import Task from '../models/Task.js';
 import Mentor from '../models/Mentor.js';
 import Student from '../models/Student.js';
 import Notification from '../models/Notification.js';
+import { io } from '../server.js';
 
 const router = express.Router();
 
@@ -44,10 +45,14 @@ router.post('/assign', authMiddleware, async (req, res) => {
         return res.status(400).json({ message: 'Target mismatch: Selected student does not exist natively bounded to this mentor Profile.' });
     }
 
-    await Task.insertMany(tasksToInsert);
+    const insertedTasks = await Task.insertMany(tasksToInsert);
     
-    // Auto-Alert Push Notifications
-    const notifs = tasksToInsert.map(t => ({ user: t.student, message: `New Task Assigned: ${t.title}`, type: 'task' }));
+    // Auto-Alert Push Notifications & Sockets
+    const notifs = [];
+    insertedTasks.forEach(t => {
+      notifs.push({ user: t.student, message: `New Task Assigned: ${t.title}`, type: 'task' });
+      io.to(t.student.toString()).emit('new_task', { title: t.title, deadline: t.deadline });
+    });
     await Notification.insertMany(notifs);
 
     res.status(201).json({ message: 'Tasks successfully pushed to students' });
@@ -72,29 +77,44 @@ router.get('/mentor', authMiddleware, async (req, res) => {
 });
 
 // @route   PUT /api/tasks/:id/status
-// @desc    Mentor updates the current progression standing of an assignment
+// @desc    Update progression standing. Mentors can approve, Students can submit.
 router.put('/:id/status', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'mentor') return res.status(403).json({ message: 'Unauthorized. Only mentors can evaluate assigned tasks.' });
-        
         const task = await Task.findById(req.params.id);
         if (!task) return res.status(404).json({ message: 'Task not found' });
         
-        if (task.assignedBy.toString() !== req.user.id) {
+        // Security check
+        if (req.user.role === 'mentor' && task.assignedBy.toString() !== req.user.id) {
            return res.status(403).json({ message: 'Cannot modify a task you did not assign.' });
         }
+        if (req.user.role === 'student' && task.student.toString() !== req.user.id) {
+           return res.status(403).json({ message: 'You can only submit your own tasks.' });
+        }
 
-        // Cycle through the statuses dynamically
-        const statuses = ['Pending', 'In Progress', 'Completed'];
-        const colors = { 'Pending': 'rose', 'In Progress': 'amber', 'Completed': 'emerald' };
+        const statuses = ['Pending', 'In Progress', 'Under Review', 'Completed'];
+        const colors = { 'Pending': 'rose', 'In Progress': 'amber', 'Under Review': 'cyan', 'Completed': 'emerald' };
         
         let currentIndex = statuses.indexOf(task.status);
         let nextIndex = (currentIndex + 1) % statuses.length;
+
+        // Logic check: Only Mentors can push to Completed
+        if (req.user.role === 'student' && statuses[nextIndex] === 'Completed') {
+            return res.status(400).json({ message: 'Students can only submit for review. Mentor must approve!' });
+        }
         
         task.status = statuses[nextIndex];
         task.color = colors[task.status];
-        
         await task.save();
+
+        // ⚡ Live Socket notification
+        if (task.status === 'Under Review') {
+           io.to(task.assignedBy.toString()).emit('task_submitted', { title: task.title, student: req.user.id });
+           await Notification.create({ user: task.assignedBy, message: `A student submitted task: ${task.title}`, type: 'task' });
+        } else if (task.status === 'Completed') {
+           io.to(task.student.toString()).emit('task_approved', { title: task.title });
+           await Notification.create({ user: task.student, message: `Mentor approved your task: ${task.title} 🌟!`, type: 'task' });
+        }
+
         res.json(task);
     } catch (err) {
         res.status(500).json({ message: 'Server database error while updating the task status.' });
@@ -105,13 +125,47 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
 // @desc    Get all daily tasks uniquely assigned to the logged in student
 router.get('/student', authMiddleware, async (req, res) => {
     try {
-       // Populate the assignedBy field so we know the mentor's name!
        const tasks = await Task.find({ student: req.user.id })
            .populate('assignedBy', 'name')
            .sort({ createdAt: -1 });
        res.json(tasks);
     } catch (err) {
        res.status(500).json({ message: 'Error fetching tasks' });
+    }
+});
+
+// @route   PUT /api/tasks/:id/submit
+// @desc    Submit a file or grade/feedback
+router.put('/:id/submit', authMiddleware, async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (!task) return res.status(404).json({ message: 'Task not found' });
+
+        const { submissionUrl, feedback, grade } = req.body;
+
+        if (req.user.role === 'student') {
+            if (task.student.toString() !== req.user.id) return res.status(403).json({ message: 'Not your task' });
+            task.submissionUrl = submissionUrl || task.submissionUrl;
+            task.status = 'Under Review';
+            task.color = 'cyan';
+            
+            io.to(task.assignedBy.toString()).emit('task_submitted', { title: task.title, student: req.user.id });
+            await Notification.create({ user: task.assignedBy, message: `A student submitted task: ${task.title}`, type: 'task' });
+        } else if (req.user.role === 'mentor') {
+            if (task.assignedBy.toString() !== req.user.id) return res.status(403).json({ message: 'Not assigned by you' });
+            task.feedback = feedback || task.feedback;
+            task.grade = grade || task.grade;
+            task.status = 'Completed';
+            task.color = 'emerald';
+            
+            io.to(task.student.toString()).emit('task_approved', { title: task.title });
+            await Notification.create({ user: task.student, message: `Task approved: ${task.title}. Grade: ${task.grade}/100`, type: 'task' });
+        }
+
+        await task.save();
+        res.json(task);
+    } catch (err) {
+        res.status(500).json({ message: 'Error updating task.' });
     }
 });
 

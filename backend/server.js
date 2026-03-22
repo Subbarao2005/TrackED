@@ -8,6 +8,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cron from 'node-cron';
+import http from 'http';
+import { Server } from 'socket.io';
 import authRoutes from './routes/auth.js';
 import mentorRoutes from './routes/mentor.js';
 import taskRoutes from './routes/tasks.js';
@@ -19,7 +21,21 @@ import notificationRoutes from './routes/notifications.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 
 const app = express();
+const server = http.createServer(app);
+export const io = new Server(server, { cors: { origin: '*' } });
+
 const PORT = process.env.PORT || 5000;
+
+// Socket.IO Connection Handler
+io.on('connection', (socket) => {
+  console.log('⚡ Socket connected:', socket.id);
+  // Optional: Students can join a room bearing their user ID to receive targeted real-time alerts
+  socket.on('join', (userId) => {
+    socket.join(userId);
+    console.log(`👤 User ${userId} joined room`);
+  });
+  socket.on('disconnect', () => console.log('🔴 Socket disconnected:', socket.id));
+});
 
 // 🛡️ Security Middleware
 app.use(helmet({ contentSecurityPolicy: false })); // Security headers
@@ -106,8 +122,8 @@ const connectDB = async () => {
 };
 
 connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} (with Socket.IO 🚀)`);
     console.log(`🛡️  Rate Limiting: Active | 🔒 Helmet: Active`);
   });
 

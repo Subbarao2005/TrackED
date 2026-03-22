@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
-import { Bell, CheckSquare, Send, Calendar, Clock } from 'lucide-react';
+import { Bell, CheckSquare, Send, Calendar, Clock, Link, CheckCircle2, MessageSquare } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -11,6 +12,12 @@ export default function MentorTasks() {
   const [recentTasks, setRecentTasks] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Grading State
+  const [gradingTask, setGradingTask] = useState(null);
+  const [grade, setGrade] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [isGrading, setIsGrading] = useState(false);
 
   const fetchRecentTasks = async () => {
      try {
@@ -42,16 +49,37 @@ export default function MentorTasks() {
      fetchStudentRoster();
   }, []);
 
-  const updateTaskStatus = async (id) => {
+  const updateTaskStatus = async (id, status) => {
     try {
         const token = localStorage.getItem('token');
         await axios.put(`http://localhost:5000/api/tasks/${id}/status`, {}, {
             headers: { Authorization: `Bearer ${token}` }
         });
-        toast.success("Task updated!");
-        fetchRecentTasks(); // Live refresh the array
+        toast.success("Task status updated!");
+        fetchRecentTasks();
     } catch(err) { 
-        toast.error("Failed to cycle task status"); 
+        toast.error("Failed to update task status"); 
+    }
+  };
+
+  const handleGradeSubmit = async (taskId) => {
+    if (!grade) return toast.error("Please enter a grade.");
+    setIsGrading(true);
+    try {
+        const token = localStorage.getItem('token');
+        await axios.put(`http://localhost:5000/api/tasks/${taskId}/submit`, 
+          { grade, feedback },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success("Task graded and approved!");
+        setGradingTask(null);
+        setGrade('');
+        setFeedback('');
+        fetchRecentTasks();
+    } catch(err) { 
+        toast.error(err.response?.data?.message || "Failed to submit grade"); 
+    } finally {
+        setIsGrading(false);
     }
   };
   
@@ -154,30 +182,88 @@ export default function MentorTasks() {
                <h2 className="text-xl font-bold text-white flex items-center gap-2"><Clock className="w-5 h-5 text-slate-400"/> Recently Assigned</h2>
              </div>
              
-             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+             <div className="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
                {recentTasks.length === 0 ? (
                  <p className="text-slate-500 text-sm">No recent assignments found.</p>
                ) : recentTasks.map((t) => (
-                 <div key={t._id} className="p-4 bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors rounded-2xl">
-                   <div className="flex justify-between items-start mb-2">
-                     <h3 className="font-bold text-slate-200">{t.title}</h3>
-                     <div className="flex items-center gap-2">
-                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-${t.color}-500/10 text-${t.color}-400 border border-${t.color}-500/20`}>{t.status}</span>
-                       {t.status !== 'Completed' && (
-                          <button 
-                            onClick={() => updateTaskStatus(t._id)}
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded transition-all shadow-md pb-[-1px]"
-                          >
-                            Mark
-                          </button>
+                 <motion.div layout key={t._id} className="p-5 bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors rounded-2xl relative overflow-hidden">
+                   
+                   {/* Highlight Under Review tasks */}
+                   {t.status === 'Under Review' && (
+                     <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"></div>
+                   )}
+
+                   <div className="flex justify-between items-start mb-3">
+                     <div>
+                       <h3 className="font-bold text-slate-200 text-lg">{t.title}</h3>
+                       <p className="text-xs text-slate-400 mt-1">Student: <span className="font-bold text-slate-300">{t.student?.name || 'Unknown'}</span></p>
+                     </div>
+                     <span className={`text-[10px] uppercase tracking-wider font-extrabold px-3 py-1 rounded-full bg-${t.color}-500/10 text-${t.color}-400 border border-${t.color}-500/20 shadow-inner`}>{t.status}</span>
+                   </div>
+
+                   {/* Submissions & Grading UI */}
+                   {t.status === 'Under Review' && t.submissionUrl && (
+                     <div className="mt-4 p-4 bg-slate-950/50 border border-cyan-500/20 rounded-xl">
+                       <div className="flex items-center gap-2 mb-4">
+                         <div className="bg-cyan-500/10 p-2 rounded-lg"><Link className="w-4 h-4 text-cyan-400" /></div>
+                         <a href={t.submissionUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-cyan-400 hover:text-cyan-300 underline underline-offset-4 truncate max-w-[200px]">
+                           View Submission Link
+                         </a>
+                       </div>
+
+                       {gradingTask === t._id ? (
+                         <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                           <input 
+                              type="number" min="0" max="100" placeholder="Grade (0-100)"
+                              value={grade} onChange={e => setGrade(e.target.value)}
+                              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none"
+                           />
+                           <textarea 
+                              placeholder="Feedback (optional)..." rows="2"
+                              value={feedback} onChange={e => setFeedback(e.target.value)}
+                              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none resize-none"
+                           />
+                           <div className="flex gap-2">
+                             <button onClick={() => handleGradeSubmit(t._id)} disabled={isGrading} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2">
+                               <CheckCircle2 className="w-4 h-4" /> Approve & Grade
+                             </button>
+                             <button onClick={() => {setGradingTask(null); setGrade(''); setFeedback('');}} className="px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-lg text-sm transition-all">
+                               Cancel
+                             </button>
+                           </div>
+                         </div>
+                       ) : (
+                         <button 
+                           onClick={() => setGradingTask(t._id)}
+                           className="w-full py-2 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 border border-cyan-500/30 font-bold rounded-lg text-sm transition-all flex justify-center items-center gap-2"
+                         >
+                           <MessageSquare className="w-4 h-4" /> Grade Task
+                         </button>
                        )}
                      </div>
-                   </div>
-                   <div className="flex gap-4 text-xs font-medium text-slate-500 mt-3 pt-3 border-t border-slate-800">
-                     <span>Deadline: {t.deadline}</span>
-                     <span>Assigned to: <span className="text-slate-300">{t.student?.name || 'Unknown Student'}</span></span>
-                   </div>
-                 </div>
+                   )}
+
+                   {/* Completed Status view */}
+                   {t.status === 'Completed' && t.grade && (
+                     <div className="mt-3 text-xs bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg flex items-center justify-between">
+                       <span className="text-emerald-400 font-bold">Grade: {t.grade}/100</span>
+                       {t.feedback && <span className="text-slate-400 italic truncate max-w-[150px]">"{t.feedback}"</span>}
+                     </div>
+                   )}
+
+                   {/* Quick Status toggle for Pending/In progress */}
+                   {t.status !== 'Completed' && t.status !== 'Under Review' && (
+                     <div className="mt-3 flex gap-2">
+                       <button 
+                         onClick={() => updateTaskStatus(t._id)}
+                         className="flex-1 py-1.5 border border-slate-700 hover:border-slate-500 hover:bg-slate-800 rounded-lg text-xs font-bold text-slate-400 transition-colors"
+                       >
+                         Nudge Status (Debug)
+                       </button>
+                     </div>
+                   )}
+
+                 </motion.div>
                ))}
              </div>
           </div>

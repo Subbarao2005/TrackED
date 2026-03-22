@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import { SkeletonTableRow } from '../components/SkeletonCard';
-import { Search, Bell, CheckSquare, Clock, Calendar, Filter, ClipboardList, CheckCircle2, Hourglass } from 'lucide-react';
+import { Search, Bell, CheckSquare, Clock, Calendar, Filter, ClipboardList, CheckCircle2, Hourglass, UploadCloud, Link } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -21,7 +21,7 @@ function getCountdown(deadlineStr) {
   return { label: deadline.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), urgent: false };
 }
 
-const STATUS_FILTERS = ['All', 'Pending', 'In Progress', 'Completed'];
+const STATUS_FILTERS = ['All', 'Pending', 'In Progress', 'Under Review', 'Completed'];
 
 export default function StudentTasks() {
   const [tasks, setTasks] = useState([]);
@@ -29,6 +29,11 @@ export default function StudentTasks() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showCompleted, setShowCompleted] = useState(true);
+  
+  // Submission State
+  const [submitTask, setSubmitTask] = useState(null); // the id of the task being submitted
+  const [submissionUrl, setSubmissionUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -47,6 +52,27 @@ export default function StudentTasks() {
     fetchTasks();
   }, []);
 
+  const handleTaskSubmit = async (taskId) => {
+    if (!submissionUrl) return toast.error('Please enter a submission link (Drive, GitHub, etc.)');
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.put(`http://localhost:5000/api/tasks/${taskId}/submit`, 
+        { submissionUrl },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Update local state smoothly
+      setTasks(prev => prev.map(t => t._id === taskId ? res.data : t));
+      toast.success('Task submitted! Sent to mentor for review.');
+      setSubmitTask(null);
+      setSubmissionUrl('');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Submission failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // ─── Live Filter Logic ────────────────────────────────────────
   const filtered = tasks.filter(t => {
     const matchSearch = t.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -58,11 +84,13 @@ export default function StudentTasks() {
 
   const pending = tasks.filter(t => t.status === 'Pending').length;
   const inProgress = tasks.filter(t => t.status === 'In Progress').length;
+  const underReview = tasks.filter(t => t.status === 'Under Review').length;
   const completed = tasks.filter(t => t.status === 'Completed').length;
 
   const colorMap = {
     rose: { bg: 'bg-rose-500/10', border: 'border-rose-500/20', text: 'text-rose-400' },
     amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-400' },
+    cyan: { bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', text: 'text-cyan-400' },
     emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' },
   };
 
@@ -84,10 +112,11 @@ export default function StudentTasks() {
         </header>
 
         {/* Mini stat strip */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Pending', count: pending, color: 'text-rose-400', icon: Hourglass },
             { label: 'In Progress', count: inProgress, color: 'text-amber-400', icon: Clock },
+            { label: 'Under Review', count: underReview, color: 'text-cyan-400', icon: UploadCloud },
             { label: 'Completed', count: completed, color: 'text-emerald-400', icon: CheckCircle2 },
           ].map(({ label, count, color, icon: Icon }) => (
             <div key={label} className="bg-[#0A0F1C] border border-slate-800 rounded-2xl p-4 flex items-center gap-4">
@@ -227,9 +256,50 @@ export default function StudentTasks() {
                         </div>
                       </div>
 
-                      <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${c.bg} ${c.text} border ${c.border} shadow-inner flex-shrink-0`}>
-                        {task.status}
-                      </span>
+                      <div className="flex items-center gap-4 flex-wrap">
+                        {submitTask === task._id ? (
+                          <div className="flex items-center gap-2">
+                            <div className="relative">
+                              <Link className="w-4 h-4 text-cyan-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                              <input 
+                                type="url" 
+                                placeholder="Paste Google Drive/GitHub link..."
+                                value={submissionUrl}
+                                onChange={e => setSubmissionUrl(e.target.value)}
+                                className="bg-slate-950 border border-slate-700/50 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 w-56"
+                              />
+                            </div>
+                            <button 
+                              onClick={() => handleTaskSubmit(task._id)}
+                              disabled={isSubmitting}
+                              className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
+                            >
+                              Send
+                            </button>
+                            <button 
+                              onClick={() => { setSubmitTask(null); setSubmissionUrl(''); }}
+                              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            {(task.status === 'Pending' || task.status === 'In Progress') && (
+                              <button 
+                                onClick={() => setSubmitTask(task._id)}
+                                className="px-4 py-1.5 rounded-xl border border-dashed border-cyan-500/50 hover:bg-cyan-500/10 hover:border-cyan-500/80 text-cyan-400 text-xs font-bold transition-colors flex items-center gap-2 flex-shrink-0"
+                              >
+                                <UploadCloud className="w-4 h-4" /> Submit
+                              </button>
+                            )}
+
+                            <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${c.bg} ${c.text} border ${c.border} shadow-inner flex-shrink-0`}>
+                              {task.status}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </motion.div>
                   );
                 })}

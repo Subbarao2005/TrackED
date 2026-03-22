@@ -4,6 +4,7 @@ import Attendance from '../models/Attendance.js';
 import Mentor from '../models/Mentor.js';
 import Student from '../models/Student.js';
 import Notification from '../models/Notification.js';
+import { io } from '../server.js';
 
 const router = express.Router();
 
@@ -61,6 +62,9 @@ router.post('/mark', authMiddleware, async (req, res) => {
             
             // Push notification directly bounding to the student profile
             await Notification.create({ user: record.student, message: `Your precise attendance was marked as ${record.status} for ${date}`, type: 'attendance' });
+
+            // ⚡ Live Socket Trigger to the student
+            io.to(record.student).emit('live_attendance', { status: record.status, date });
         }
         res.json({ message: 'Daily Register Safely Synchronized to Database' });
     } catch (err) {
