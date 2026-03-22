@@ -17,6 +17,7 @@ import TeacherAssignments from './pages/TeacherAssignments';
 import TeacherExams from './pages/TeacherExams';
 import TeacherFinance from './pages/TeacherFinance';
 import StudentExam from './pages/StudentExam';
+import StudentLeaderboard from './pages/StudentLeaderboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -47,6 +48,10 @@ function App() {
         <Route 
           path="/student/fees" 
           element={<ProtectedRoute allowedRoles={['student']}><StudentFees /></ProtectedRoute>} 
+        />
+        <Route 
+          path="/student/leaderboard" 
+          element={<ProtectedRoute allowedRoles={['student']}><StudentLeaderboard /></ProtectedRoute>} 
         />
         
         <Route 

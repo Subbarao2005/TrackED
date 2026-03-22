@@ -16,6 +16,7 @@ import teacherRoutes from './routes/teacher.js';
 import examRoutes from './routes/exam.js';
 import financeRoutes from './routes/finance.js';
 import notificationRoutes from './routes/notifications.js';
+import leaderboardRoutes from './routes/leaderboard.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,6 +45,7 @@ app.use('/api/teacher', teacherRoutes);
 app.use('/api/exam', examRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 app.get('/', (req, res) => {
   res.send('API Running – TrackED Backend v2.0 (Secured + Rate-Limited)');
