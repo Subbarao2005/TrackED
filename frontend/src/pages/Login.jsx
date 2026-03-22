@@ -14,8 +14,16 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
+    // Support MOCK LOGIN SHORTCUTS
+    let finalEmail = email.trim();
+    if (finalEmail.endsWith('@')) {
+        finalEmail += 'tracked.com';
+    } else if (['student', 'mentor', 'teacher', 'developer'].includes(finalEmail)) {
+        finalEmail += '@tracked.com';
+    }
+
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const res = await axios.post('http://localhost:5000/api/auth/login', { email: finalEmail, password });
       setIsLoading(false);
       
       const { token, user } = res.data;

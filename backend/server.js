@@ -38,6 +38,7 @@ io.on('connection', (socket) => {
 });
 
 // 🛡️ Security Middleware
+app.use(cors()); // ⚡ Moved UP to ensure preflight requests get headers even when rate limited!
 app.use(helmet({ contentSecurityPolicy: false })); // Security headers
 
 // 🚦 Global API Rate Limiter: 200 requests per 15 minutes per IP
@@ -50,7 +51,6 @@ const globalLimiter = rateLimit({
 });
 app.use('/api/', globalLimiter);
 app.use(express.json());
-app.use(cors());
 
 // Routes
 app.use('/api/auth', authRoutes);
